@@ -2,8 +2,8 @@ This sample is to provision Azure User Assigned Managed Identify (UAMI) and Depl
 
 ## Prerequisites
 
-To deploy the sample, you must meet one of the following condition: 
-- [Contributor](https://docs.microsoft.com/en-us/azure/role-based-access-control/built-in-roles#contributor) + [User Access Administrator](https://docs.microsoft.com/en-us/azure/role-based-access-control/built-in-roles#user-access-administrator) 
+To deploy the sample, you must meet one of the following subscription permission: 
+- [Contributor](https://docs.microsoft.com/en-us/azure/role-based-access-control/built-in-roles#contributor) + [User Access Administrator](https://docs.microsoft.com/en-us/azure/role-based-access-control/built-in-roles#user-access-administrator) (Both are subsrciption roles, not AAD roles.)
 - [Owner](https://docs.microsoft.com/en-us/azure/role-based-access-control/built-in-roles#owner)
 
 ## Run with Azure CLI
