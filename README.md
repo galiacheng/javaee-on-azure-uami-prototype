@@ -1,4 +1,4 @@
-This sample is to provision Azure User Assigned Managed Identify (UAMI) and Deployment Script using Bicep template. By assigning Contributor Role to the UAMI, the deplyment script is able to access/update resource (here is a storage account).
+This sample is to provision Azure User Assigned Managed Identify (UAMI) and Deployment Script using Bicep template. By assigning Contributor Role to the UAMI, the deplyment script is able to access/update Azure resource (here is a storage account).
 
 ## Prerequisites
 
