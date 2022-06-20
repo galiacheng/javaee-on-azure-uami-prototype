@@ -12,6 +12,7 @@ var name_uami = 'wls-aks-deployment-script-user-defined-managed-itentity'
 var name_uamiAKSIdentity = 'wls-aks-kubernetes-user-defined-managed-itentity'
 var name_applicationGatewayUserDefinedManagedIdentity = 'wls-aks-application-gateway-user-defined-managed-itentity'
 var name_aksContributorRoleAssignmentName = '${guid(concat(resourceGroup().id, name_uamiAKSIdentity, 'ForAKSCluster'))}'
+var name_appGwContributorRoleAssignmentName = '${guid(concat(resourceGroup().id, utcValue, 'ForApplicationGateway'))}'
 var ref_gatewayId = resourceId('Microsoft.Network/applicationGateways', name_appGateway)
 
 resource uami 'Microsoft.ManagedIdentity/userAssignedIdentities@2021-09-30-preview' = {
@@ -77,7 +78,7 @@ resource uamiGateway 'Microsoft.ManagedIdentity/userAssignedIdentities@2021-09-3
   location: location
 }
 
-module vnetForAppGateway 'modules/_vnetAppGateway.bicep' = {
+module vnet 'modules/_vnet.bicep' = {
   name: 'deploy-application-gateway-vnet'
   params: {
     location: location
@@ -89,12 +90,12 @@ module appGateway 'modules/_appgateway.bicep' = {
   params: {
     location: location
     gatewayName: name_appGateway
-    gatewaySubnetId: vnetForAppGateway.outputs.subIdForApplicationGateway
+    gatewaySubnetId: vnet.outputs.subIdForApplicationGateway
     uamiId: uamiGateway.id
     staticPrivateFrontentIP: ''
   }
   dependsOn:[
-    vnetForAppGateway
+    vnet
   ]
 }
 
@@ -115,6 +116,7 @@ module aks 'modules/_aks.bicep' = {
         resourceId: uamiGateway.id
       }
     }
+    vnetSubnetID: vnet.outputs.subIdForAKS
   }
   dependsOn:[
     uamiRoleAssignment2
@@ -122,7 +124,15 @@ module aks 'modules/_aks.bicep' = {
   ]
 }
 
-
+resource uamiRoleAssignment3 'Microsoft.Authorization/roleAssignments@2020-10-01-preview' = {
+  name: name_appGwContributorRoleAssignmentName
+  properties: {
+    description: 'Assign Resource Group Contributor role to User Assigned Managed Identity '
+    principalId: reference(resourceId('Microsoft.ContainerService/managedClusters', name_aksClusterName), '2020-12-01', 'Full').properties.addonProfiles.ingressApplicationGateway.identity.objectId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: resourceId('Microsoft.Authorization/roleDefinitions', const_roleDefinitionIdOfContributor)
+  }
+}
 
 resource deploymentScript 'Microsoft.Resources/deploymentScripts@2020-10-01' = {
   name: 'deployment-script'

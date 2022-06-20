@@ -6,38 +6,33 @@ param vnetForApplicationGateway object = {
   name: 'wlsaks-app-gateway-vnet'
   resourceGroup: resourceGroup().name
   addressPrefixes: [
-    '172.16.0.0/24'
+    '10.0.0.0/12'
   ]
-  addressPrefix: '172.16.0.0/24'
+  addressPrefix: '10.0.0.0/12'
   newOrExisting: 'new'
   subnets: {
     gatewaySubnet: {
       name: 'wlsaks-gateway-subnet'
-      addressPrefix: '172.16.0.0/24'
-      startAddress: '172.16.0.4'
+      addressPrefix: '10.1.0.0/24'
+      startAddress: '10.1.0.4'
+    }
+    aksSubnet: {
+      name: 'wlsaks-subnet'
+      addressPrefix: '10.0.0.0/12'
+      startAddress: '10.0.0.4'
     }
   }
 }
 param utcValue string = utcNow()
 
+var const_aksSubnetAddressPrefixes = vnetForApplicationGateway.subnets.aksSubnet.addressPrefix
 var const_subnetAddressPrefixes = vnetForApplicationGateway.subnets.gatewaySubnet.addressPrefix
 var const_vnetAddressPrefixes = vnetForApplicationGateway.addressPrefixes
 var const_newVnet = (vnetForApplicationGateway.newOrExisting == 'new') ? true : false
 var name_nsg = 'wlsaks-nsg-${uniqueString(utcValue)}'
 var name_subnet = vnetForApplicationGateway.subnets.gatewaySubnet.name
+var name_aksSubnet = vnetForApplicationGateway.subnets.aksSubnet.name
 var name_vnet = vnetForApplicationGateway.name
-
-// Get existing VNET.
-resource existingVnet 'Microsoft.Network/virtualNetworks@2021-08-01' existing = if (!const_newVnet) {
-  name: name_vnet
-  scope: resourceGroup(vnetForApplicationGateway.resourceGroup)
-}
-
-// Get existing subnet.
-resource existingSubnet 'Microsoft.Network/virtualNetworks/subnets@2021-08-01' existing = if (!const_newVnet) {
-  name: name_subnet
-  parent: existingVnet
-}
 
 // Create new network security group.
 resource nsg 'Microsoft.Network/networkSecurityGroups@2021-08-01' = if (const_newVnet) {
@@ -96,11 +91,18 @@ resource newVnet 'Microsoft.Network/virtualNetworks@2021-08-01' = if (const_newV
           }
         }
       }
+      {
+        name: name_aksSubnet
+        properties: {
+          addressPrefix: const_aksSubnetAddressPrefixes
+          networkSecurityGroup: {
+            id: nsg.id
+          }
+        }
+      }
     ]
   }
-  dependsOn: [
-    nsg
-  ]
 }
 
-output subIdForApplicationGateway string = const_newVnet ? resourceId('Microsoft.Network/virtualNetworks/subnets', name_vnet, name_subnet) : existingSubnet.id
+output subIdForApplicationGateway string = resourceId('Microsoft.Network/virtualNetworks/subnets', name_vnet, name_subnet)
+output subIdForAKS string = resourceId('Microsoft.Network/virtualNetworks/subnets', name_vnet, name_aksSubnet)
