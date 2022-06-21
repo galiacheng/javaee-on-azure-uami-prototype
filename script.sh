@@ -1,3 +1,6 @@
+export script="${BASH_SOURCE[0]}"
+export scriptDir="$(cd "$(dirname "${script}")" && pwd)"
+
 ymlIngressWlsAdmin="ingress-wls-admin.yaml"
 yamlIngressWlsCluster="ingress-wls-cluster.yaml"
 ymlOptNs="opt-namespace.yaml"
@@ -8,7 +11,7 @@ ymlWlsAdminAccountSecret="wls-admin-k8s-secret.yaml"
 ymlWlsDomain="wls-domain.yaml"
 
 function generate_sample_configurations() {
-    cat <<EOF >${ymlIngressWlsAdmin}
+    cat <<EOF >${scriptDir}/${ymlIngressWlsAdmin}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -33,7 +36,7 @@ spec:
                 number: 7001
 EOF
 
-    cat <<EOF >${yamlIngressWlsCluster}
+    cat <<EOF >${scriptDir}/${yamlIngressWlsCluster}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -62,21 +65,21 @@ spec:
 
 EOF
 
-    cat <<EOF >${ymlOptNs}
+    cat <<EOF >${scriptDir}/${ymlOptNs}
 apiVersion: v1
 kind: Namespace
 metadata:
   name: sample-weblogic-operator-ns
 EOF
 
-    cat <<EOF >${ymlOptSa}
+    cat <<EOF >${scriptDir}/${ymlOptSa}
 apiVersion: v1
 kind: Namespace
 metadata:
   name: sample-weblogic-operator-ns
 EOF
 
-    cat <<EOF >${ymlWlsNs}
+    cat <<EOF >${scriptDir}/${ymlWlsNs}
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -85,7 +88,7 @@ metadata:
     weblogic-operator: "enabled"
 EOF
 
-    cat <<EOF >${ymlWlsWdtSecret}
+    cat <<EOF >${scriptDir}/${ymlWlsWdtSecret}
 apiVersion: v1
 kind: Secret
 metadata:
@@ -98,7 +101,7 @@ data:
 type: Opaque
 EOF
 
-    cat <<EOF >${ymlWlsAdminAccountSecret}
+    cat <<EOF >${scriptDir}/${ymlWlsAdminAccountSecret}
 apiVersion: v1
 kind: Secret
 metadata:
@@ -112,7 +115,7 @@ data:
 type: Opaque
 EOF
 
-    cat <<EOF >${ymlWlsDomain}
+    cat <<EOF >${scriptDir}/${ymlWlsDomain}
 # Copyright (c) 2020, 2021, Oracle and/or its affiliates.
 # Licensed under the Universal Permissive License v 1.0 as shown at http://oss.oracle.com/licenses/upl.
 #
@@ -279,6 +282,8 @@ az aks install-cli
 install_helm
 
 az aks get-credentials --resource-group ${NAME_RESOURCE_GROUP} --name ${NAME_AKS_CLUSTER}
+
+generate_sample_configurations
 
 echo "install weblogic operator"
 kubectl apply -f ${ymlOptNs}
