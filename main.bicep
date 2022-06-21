@@ -12,7 +12,6 @@ var name_uami = 'wls-aks-deployment-script-user-defined-managed-itentity'
 var name_uamiAKSIdentity = 'wls-aks-kubernetes-user-defined-managed-itentity'
 var name_applicationGatewayUserDefinedManagedIdentity = 'wls-aks-application-gateway-user-defined-managed-itentity'
 var name_aksContributorRoleAssignmentName = '${guid(concat(resourceGroup().id, name_uamiAKSIdentity, 'ForAKSCluster'))}'
-var name_appGwContributorRoleAssignmentName = '${guid(concat(resourceGroup().id, utcValue, 'ForApplicationGateway'))}'
 var ref_gatewayId = resourceId('Microsoft.Network/applicationGateways', name_appGateway)
 
 resource uami 'Microsoft.ManagedIdentity/userAssignedIdentities@2021-09-30-preview' = {
@@ -28,6 +27,7 @@ resource uamiRoleAssignment 'Microsoft.Authorization/roleAssignments@2020-10-01-
     roleDefinitionId: resourceId('Microsoft.Authorization/roleDefinitions', const_roleDefinitionIdOfContributor)
   }
 }
+
 resource storageAccount 'Microsoft.Storage/storageAccounts@2021-02-01' = {
   name: storageAccountName
   location: location
@@ -124,16 +124,6 @@ module aks 'modules/_aks.bicep' = {
   ]
 }
 
-resource uamiRoleAssignment3 'Microsoft.Authorization/roleAssignments@2020-10-01-preview' = {
-  name: name_appGwContributorRoleAssignmentName
-  properties: {
-    description: 'Assign Resource Group Contributor role to User Assigned Managed Identity '
-    principalId: reference(resourceId('Microsoft.ContainerService/managedClusters', name_aksClusterName), '2020-12-01', 'Full').properties.addonProfiles.ingressApplicationGateway.identity.objectId
-    principalType: 'ServicePrincipal'
-    roleDefinitionId: resourceId('Microsoft.Authorization/roleDefinitions', const_roleDefinitionIdOfContributor)
-  }
-}
-
 resource deploymentScript 'Microsoft.Resources/deploymentScripts@2020-10-01' = {
   name: 'deployment-script'
   location: location
@@ -154,6 +144,10 @@ resource deploymentScript 'Microsoft.Resources/deploymentScripts@2020-10-01' = {
       {
         name: 'NAME_RESOURCE_GROUP'
         value: resourceGroup().name
+      }
+      {
+        name: 'NAME_AKS_CLUSTER'
+        value: name_aksClusterName
       }
     ]
     scriptContent: loadTextContent('./script.sh')
