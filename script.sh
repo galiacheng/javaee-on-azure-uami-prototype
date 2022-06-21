@@ -301,6 +301,7 @@ echo "install weblogic"
 kubectl apply -f ${ymlWlsNs}
 kubectl apply -f ${ymlWlsWdtSecret}
 kubectl apply -f ${ymlWlsAdminAccountSecret}
+echo "deploy weblogic domain"
 kubectl apply -f ${ymlWlsDomain}
 
 echo "create azure ingress"

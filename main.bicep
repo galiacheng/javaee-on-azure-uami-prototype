@@ -3,29 +3,54 @@ param storageAccountName string = 'stg${toLower(utcValue)}'
 param location string = 'eastus'
 
 // https://docs.microsoft.com/en-us/azure/role-based-access-control/built-in-roles
-var const_roleDefinitionIdOfContributor = 'b24988ac-6180-42a0-ab88-20f7382dd24c'
 var const_azcliVersion = '2.15.0'
+var const_roleDefinitionIdOfContributor = 'b24988ac-6180-42a0-ab88-20f7382dd24c'
 var const_sku = 'Standard_LRS'
-var name_appGateway = 'appgw${uniqueString(utcValue)}'
 var name_aksClusterName = 'wlsaks${uniqueString(utcValue)}'
-var name_uami = 'wls-aks-deployment-script-user-defined-managed-itentity'
-var name_uamiAKSIdentity = 'wls-aks-kubernetes-user-defined-managed-itentity'
+var name_aksContributorRoleAssignmentName = '${guid(concat(resourceGroup().id, name_aksUserDefinedManagedIdentity, 'ForAKSCluster'))}'
+var name_aksUserDefinedManagedIdentity = 'wls-aks-kubernetes-user-defined-managed-itentity'
+var name_applicationGatewayName = 'appgw${uniqueString(utcValue)}'
 var name_applicationGatewayUserDefinedManagedIdentity = 'wls-aks-application-gateway-user-defined-managed-itentity'
-var name_aksContributorRoleAssignmentName = '${guid(concat(resourceGroup().id, name_uamiAKSIdentity, 'ForAKSCluster'))}'
-var ref_gatewayId = resourceId('Microsoft.Network/applicationGateways', name_appGateway)
+var name_deploymentScriptUserDefinedManagedIdentity = 'wls-aks-deployment-script-user-defined-managed-itentity'
+var name_deploymentScriptContributorRoleAssignmentName = '${guid(concat(resourceGroup().id, name_deploymentScriptUserDefinedManagedIdentity, 'ForAKSCluster'))}'
 
-resource uami 'Microsoft.ManagedIdentity/userAssignedIdentities@2021-09-30-preview' = {
-  name: name_uami
+var ref_gatewayId = resourceId('Microsoft.Network/applicationGateways', name_applicationGatewayName)
+
+// UAMI for deployment script
+resource uamiForDeploymentScript 'Microsoft.ManagedIdentity/userAssignedIdentities@2021-09-30-preview' = {
+  name: name_deploymentScriptUserDefinedManagedIdentity
   location: location
 }
-resource uamiRoleAssignment 'Microsoft.Authorization/roleAssignments@2020-10-01-preview' = {
-  name: guid(utcValue)
+resource deploymentScriptUAMICotibutorRoleAssignment 'Microsoft.Authorization/roleAssignments@2020-10-01-preview' = {
+  name: name_deploymentScriptContributorRoleAssignmentName
   properties: {
     description: 'Assign Resource Group Contributor role to User Assigned Managed Identity '
-    principalId: reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', name_uami)).principalId
+    principalId: reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', name_deploymentScriptUserDefinedManagedIdentity)).principalId
     principalType: 'ServicePrincipal'
     roleDefinitionId: resourceId('Microsoft.Authorization/roleDefinitions', const_roleDefinitionIdOfContributor)
   }
+}
+
+// UAMI for AKS
+resource uamiForAks 'Microsoft.ManagedIdentity/userAssignedIdentities@2021-09-30-preview' = {
+  name: name_aksUserDefinedManagedIdentity
+  location: location
+}
+
+resource aksUAMICotibutorRoleAssignment 'Microsoft.Authorization/roleAssignments@2020-10-01-preview' = {
+  name: name_aksContributorRoleAssignmentName
+  properties: {
+    description: 'Assign Resource Group Contributor role to User Assigned Managed Identity '
+    principalId: reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', name_aksUserDefinedManagedIdentity)).principalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: resourceId('Microsoft.Authorization/roleDefinitions', const_roleDefinitionIdOfContributor)
+  }
+}
+
+// UAMI for Application Gateway
+resource uamiForApplicationGateway 'Microsoft.ManagedIdentity/userAssignedIdentities@2021-09-30-preview' = {
+  name: name_applicationGatewayUserDefinedManagedIdentity
+  location: location
 }
 
 resource storageAccount 'Microsoft.Storage/storageAccounts@2021-02-01' = {
@@ -58,26 +83,6 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2021-02-01' = {
   }
 }
 
-resource uamiAks 'Microsoft.ManagedIdentity/userAssignedIdentities@2021-09-30-preview' = {
-  name: name_uamiAKSIdentity
-  location: location
-}
-
-resource uamiRoleAssignment2 'Microsoft.Authorization/roleAssignments@2020-10-01-preview' = {
-  name: name_aksContributorRoleAssignmentName
-  properties: {
-    description: 'Assign Resource Group Contributor role to User Assigned Managed Identity '
-    principalId: reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', name_uamiAKSIdentity)).principalId
-    principalType: 'ServicePrincipal'
-    roleDefinitionId: resourceId('Microsoft.Authorization/roleDefinitions', const_roleDefinitionIdOfContributor)
-  }
-}
-
-resource uamiGateway 'Microsoft.ManagedIdentity/userAssignedIdentities@2021-09-30-preview' = {
-  name: name_applicationGatewayUserDefinedManagedIdentity
-  location: location
-}
-
 module vnet 'modules/_vnet.bicep' = {
   name: 'deploy-application-gateway-vnet'
   params: {
@@ -89,12 +94,12 @@ module appGateway 'modules/_appgateway.bicep' = {
   name: 'deploy-application-gateway'
   params: {
     location: location
-    gatewayName: name_appGateway
+    gatewayName: name_applicationGatewayName
     gatewaySubnetId: vnet.outputs.subIdForApplicationGateway
-    uamiId: uamiGateway.id
+    uamiId: uamiForApplicationGateway.id
     staticPrivateFrontentIP: ''
   }
-  dependsOn:[
+  dependsOn: [
     vnet
   ]
 }
@@ -104,7 +109,7 @@ module aks 'modules/_aks.bicep' = {
   params: {
     clusterName: name_aksClusterName
     location: location
-    uamiIdentifyId: uamiAks.id
+    uamiIdentifyId: uamiForAks.id
     ingressApplicationGateway: {
       enabled: true
       config: {
@@ -113,13 +118,13 @@ module aks 'modules/_aks.bicep' = {
       identity: {
         clientId: reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', name_applicationGatewayUserDefinedManagedIdentity)).clientId
         objectId: reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', name_applicationGatewayUserDefinedManagedIdentity)).principalId
-        resourceId: uamiGateway.id
+        resourceId: uamiForApplicationGateway.id
       }
     }
     vnetSubnetID: vnet.outputs.subIdForAKS
   }
-  dependsOn:[
-    uamiRoleAssignment2
+  dependsOn: [
+    aksUAMICotibutorRoleAssignment
     appGateway
   ]
 }
@@ -131,7 +136,7 @@ resource deploymentScript 'Microsoft.Resources/deploymentScripts@2020-10-01' = {
   identity: {
     type: 'UserAssigned'
     userAssignedIdentities: {
-      '${uami.id}': {}
+      '${uamiForDeploymentScript.id}': {}
     }
   }
   properties: {
@@ -155,7 +160,7 @@ resource deploymentScript 'Microsoft.Resources/deploymentScripts@2020-10-01' = {
     retentionInterval: 'P1D'
     forceUpdateTag: utcValue
   }
-  dependsOn:[
+  dependsOn: [
     aks
   ]
 }
