@@ -2,8 +2,8 @@ export script="${BASH_SOURCE[0]}"
 export scriptDir="$(cd "$(dirname "${script}")" && pwd)"
 
 ymlIngressWlsAdmin="ingress-wls-admin.yaml"
-yamlIngressSslWlsCluster="ingress-ssl-wls-cluster.yaml"
-yamlIngressWlsCluster="ingress-wls-cluster.yaml"
+ymlIngressSslWlsCluster="ingress-ssl-wls-cluster.yaml"
+ymlIngressWlsCluster="ingress-wls-cluster.yaml"
 ymlOptNs="opt-namespace.yaml"
 ymlOptSa="operator-service-account.yaml"
 ymlWlsNs="wls-namespace.yaml"
@@ -67,7 +67,7 @@ EOF
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: azure-ingress-wls-cluster-1
+  name: azure-ingress-ssl-wls-cluster-1
   namespace: sample-domain1-ns
   labels:
     weblogic.domainUID: "sample-domain1"
@@ -336,6 +336,6 @@ echo "deploy weblogic domain"
 kubectl apply -f ${ymlWlsDomain}
 
 echo "create azure ingress"
-kubectl apply -f ${yamlIngressWlsCluster}
+kubectl apply -f ${ymlIngressWlsCluster}
 kubectl apply -f ${ymlIngressWlsAdmin}
-kubectl apply -f ${yamlIngressSslWlsCluster}
+kubectl apply -f ${ymlIngressSslWlsCluster}
