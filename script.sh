@@ -38,7 +38,7 @@ spec:
                 number: 7001
 EOF
 
-cat <<EOF >${scriptDir}/${yamlIngressWlsCluster}
+cat <<EOF >${scriptDir}/${ymlIngressWlsCluster}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -63,7 +63,7 @@ spec:
                   number: 8001
 EOF
 
-    cat <<EOF >${scriptDir}/${yamlIngressSslWlsCluster}
+    cat <<EOF >${scriptDir}/${ymlIngressSslWlsCluster}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
