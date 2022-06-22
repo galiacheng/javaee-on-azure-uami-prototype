@@ -9,6 +9,7 @@ ymlWlsNs="wls-namespace.yaml"
 ymlWlsWdtSecret="wls-wdt-k8s-secret.yaml"
 ymlWlsAdminAccountSecret="wls-admin-k8s-secret.yaml"
 ymlWlsDomain="wls-domain.yaml"
+curlMaxTime=120
 
 function generate_sample_configurations() {
     cat <<EOF >${scriptDir}/${ymlIngressWlsAdmin}
@@ -48,10 +49,8 @@ metadata:
     azure.weblogc.createdByWlsOffer: "true"
   annotations:
     kubernetes.io/ingress.class: azure/application-gateway
-    # appgw.ingress.kubernetes.io/appgw-ssl-certificate
+    appgw.ingress.kubernetes.io/appgw-ssl-certificate: ${NAME_APPGATEWAY_FRONTEND_CERT}
 spec:
-  tls:
-    - secretName: ingress-tls-secret
   rules:
     - http:
         paths:
@@ -279,6 +278,7 @@ function install_helm() {
 }
 
 az aks install-cli
+
 install_helm
 
 az aks get-credentials --resource-group ${NAME_RESOURCE_GROUP} --name ${NAME_AKS_CLUSTER}

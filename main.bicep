@@ -4,6 +4,7 @@ param location string = 'eastus'
 
 // https://docs.microsoft.com/en-us/azure/role-based-access-control/built-in-roles
 var const_azcliVersion = '2.15.0'
+var const_appGatewaySubjectName = '${format('{0}.{1}.{2}', name_domainLabelforApplicationGateway, location, 'cloudapp.azure.com')}'
 var const_roleDefinitionIdOfContributor = 'b24988ac-6180-42a0-ab88-20f7382dd24c'
 var const_sku = 'Standard_LRS'
 var name_aksClusterName = 'wlsaks${uniqueString(utcValue)}'
@@ -11,9 +12,13 @@ var name_aksContributorRoleAssignmentName = '${guid(concat(resourceGroup().id, n
 var name_aksUserDefinedManagedIdentity = 'wls-aks-kubernetes-user-defined-managed-itentity'
 var name_applicationGatewayName = 'appgw${uniqueString(utcValue)}'
 var name_applicationGatewayUserDefinedManagedIdentity = 'wls-aks-application-gateway-user-defined-managed-itentity'
+var name_certForApplicationGatwayFrontend = 'appGatewaySslCert'
 var name_deploymentScriptUserDefinedManagedIdentity = 'wls-aks-deployment-script-user-defined-managed-itentity'
 var name_deploymentScriptContributorRoleAssignmentName = '${guid(concat(resourceGroup().id, name_deploymentScriptUserDefinedManagedIdentity, 'ForAKSCluster'))}'
-
+var name_domainLabelforApplicationGateway = '${take(concat('wlsonaks', '-', toLower(name_rgNameWithoutSpecialCharacter), '-', guid(utcValue)), 63)}'
+var name_keyvault = 'kv${uniqueString(utcValue)}'
+var name_keyvaultSecretForAppGatewayFrontend = 'myApplicationGatewayFrontendCert'
+var name_rgNameWithoutSpecialCharacter = replace(replace(replace(replace(resourceGroup().name, '.', ''), '(', ''), ')', ''), '_', '') // remove . () _ from resource group name
 var ref_gatewayId = resourceId('Microsoft.Network/applicationGateways', name_applicationGatewayName)
 
 // UAMI for deployment script
@@ -83,6 +88,54 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2021-02-01' = {
   }
 }
 
+resource keyvault 'Microsoft.KeyVault/vaults@2021-10-01' = {
+  name: name_keyvault
+  location: location
+  properties: {
+    sku: {
+      family: 'A'
+      name: 'standard'
+    }
+    tenantId: subscription().tenantId
+    accessPolicies: [
+      {
+        // Must specify API version of identity.
+        objectId: reference(uamiForApplicationGateway.id, '2018-11-30').principalId
+        tenantId: reference(uamiForApplicationGateway.id, '2018-11-30').tenantId
+        permissions: {
+          secrets: [
+            'get'
+            'list'
+          ]
+          certificates: [
+            'get'
+          ]
+        }
+      }
+      {
+        // Must specify API version of identity.
+        objectId: reference(uamiForDeploymentScript.id, '2018-11-30').principalId
+        tenantId: reference(uamiForDeploymentScript.id, '2018-11-30').tenantId
+        permissions: {
+          certificates: [
+            'get'
+            'list'
+            'update'
+            'create'
+          ]
+        }
+      }
+    ]
+    enabledForDeployment: false
+    enabledForDiskEncryption: false
+    enabledForTemplateDeployment: true
+    enableSoftDelete: true
+  }
+  tags: {
+    'managed-by-azure-weblogic': utcValue
+  }
+}
+
 module vnet 'modules/_vnet.bicep' = {
   name: 'deploy-application-gateway-vnet'
   params: {
@@ -90,12 +143,31 @@ module vnet 'modules/_vnet.bicep' = {
   }
 }
 
+module certificates 'modules/_certForAppGateway.bicep' = {
+  name: 'deploy-application-gateway-frontend-certificate'
+  params:{
+    keyVaultName: name_keyvault
+    subjectName:const_appGatewaySubjectName
+    identity: {
+      type: 'UserAssigned'
+      userAssignedIdentities: {
+        '${uamiForDeploymentScript.id}': {}
+      }
+    }
+    location: location
+    secretName: name_keyvaultSecretForAppGatewayFrontend
+  }
+}
+
 module appGateway 'modules/_appgateway.bicep' = {
   name: 'deploy-application-gateway'
   params: {
+    dnsNameforApplicationGateway: name_domainLabelforApplicationGateway
     location: location
     gatewayName: name_applicationGatewayName
     gatewaySubnetId: vnet.outputs.subIdForApplicationGateway
+    gatwaySslCertName: name_certForApplicationGatwayFrontend
+    keyVaultSecretId: concat(reference(name_keyvault).vaultUri, 'secrets/${name_keyvaultSecretForAppGatewayFrontend}')
     uamiId: uamiForApplicationGateway.id
     staticPrivateFrontentIP: ''
   }
@@ -153,6 +225,10 @@ resource deploymentScript 'Microsoft.Resources/deploymentScripts@2020-10-01' = {
       {
         name: 'NAME_AKS_CLUSTER'
         value: name_aksClusterName
+      }
+      {
+        name: 'NAME_APPGATEWAY_FRONTEND_CERT'
+        value: name_certForApplicationGatwayFrontend
       }
     ]
     scriptContent: loadTextContent('./script.sh')

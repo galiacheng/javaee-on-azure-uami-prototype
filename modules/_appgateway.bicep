@@ -3,13 +3,15 @@
 
 @description('DNS for ApplicationGateway')
 param dnsNameforApplicationGateway string = take('wlsgw${uniqueString(utcValue)}', 63)
+param gatwaySslCertName string
 param gatewayName string
 @description('Public IP Name for the Application Gateway')
 param gatewayPublicIPAddressName string = 'gwip'
 param gatewaySubnetId string
-param uamiId string
+param keyVaultSecretId string
 param location string
 param staticPrivateFrontentIP string
+param uamiId string
 param usePrivateIP bool = false
 param utcValue string = utcNow()
 
@@ -87,6 +89,14 @@ resource wafv2AppGateway 'Microsoft.Network/applicationGateways@2020-07-01' = {
       name: 'WAF_v2'
       tier: 'WAF_v2'
     }
+    sslCertificates: [
+      {
+        name: gatwaySslCertName
+        properties: {
+          keyVaultSecretId: keyVaultSecretId
+        }
+      }
+    ]
     gatewayIPConfigurations: [
       {
         name: 'appGatewayIpConfig'
