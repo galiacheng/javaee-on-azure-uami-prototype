@@ -12,6 +12,7 @@ var name_aksContributorRoleAssignmentName = '${guid(concat(resourceGroup().id, n
 var name_aksUserDefinedManagedIdentity = 'wls-aks-kubernetes-user-defined-managed-itentity'
 var name_applicationGatewayName = 'appgw${uniqueString(utcValue)}'
 var name_applicationGatewayUserDefinedManagedIdentity = 'wls-aks-application-gateway-user-defined-managed-itentity'
+var name_appGwContributorRoleAssignmentName = '${guid(concat(resourceGroup().id, utcValue, 'ForApplicationGateway'))}'
 var name_certForApplicationGatwayFrontend = 'appGatewaySslCert'
 var name_deploymentScriptUserDefinedManagedIdentity = 'wls-aks-deployment-script-user-defined-managed-itentity'
 var name_deploymentScriptContributorRoleAssignmentName = '${guid(concat(resourceGroup().id, name_deploymentScriptUserDefinedManagedIdentity, 'ForAKSCluster'))}'
@@ -56,6 +57,16 @@ resource aksUAMICotibutorRoleAssignment 'Microsoft.Authorization/roleAssignments
 resource uamiForApplicationGateway 'Microsoft.ManagedIdentity/userAssignedIdentities@2021-09-30-preview' = {
   name: name_applicationGatewayUserDefinedManagedIdentity
   location: location
+}
+
+resource gatewayUAMIRoleAssignment 'Microsoft.Authorization/roleAssignments@2020-10-01-preview' = {
+  name: name_appGwContributorRoleAssignmentName
+  properties: {
+    description: 'Assign Resource Group Contributor role to User Assigned Managed Identity '
+    principalId: reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', name_applicationGatewayUserDefinedManagedIdentity)).principalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: resourceId('Microsoft.Authorization/roleDefinitions', const_roleDefinitionIdOfContributor)
+  }
 }
 
 resource storageAccount 'Microsoft.Storage/storageAccounts@2021-02-01' = {
