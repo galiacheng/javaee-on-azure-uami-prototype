@@ -4,7 +4,7 @@ param location string = 'eastus'
 
 // https://docs.microsoft.com/en-us/azure/role-based-access-control/built-in-roles
 var const_azcliVersion = '2.15.0'
-var const_appGatewaySubjectName = '${format('{0}.{1}.{2}', name_domainLabelforApplicationGateway, location, 'cloudapp.azure.com')}'
+var const_appGatewayDns = '${format('{0}.{1}.{2}', name_domainLabelforApplicationGateway, location, 'cloudapp.azure.com')}'
 var const_roleDefinitionIdOfContributor = 'b24988ac-6180-42a0-ab88-20f7382dd24c'
 var const_sku = 'Standard_LRS'
 var name_aksClusterName = 'wlsaks${uniqueString(utcValue)}'
@@ -15,7 +15,7 @@ var name_applicationGatewayUserDefinedManagedIdentity = 'wls-aks-application-gat
 var name_certForApplicationGatwayFrontend = 'appGatewaySslCert'
 var name_deploymentScriptUserDefinedManagedIdentity = 'wls-aks-deployment-script-user-defined-managed-itentity'
 var name_deploymentScriptContributorRoleAssignmentName = '${guid(concat(resourceGroup().id, name_deploymentScriptUserDefinedManagedIdentity, 'ForAKSCluster'))}'
-var name_domainLabelforApplicationGateway = '${take(concat('wlsonaks', '-', toLower(name_rgNameWithoutSpecialCharacter), '-', guid(utcValue)), 63)}'
+var name_domainLabelforApplicationGateway = '${take(concat('wlsonaks', take(utcValue, 6), '-', toLower(name_rgNameWithoutSpecialCharacter)), 63)}'
 var name_keyvault = 'kv${uniqueString(utcValue)}'
 var name_keyvaultSecretForAppGatewayFrontend = 'myApplicationGatewayFrontendCert'
 var name_rgNameWithoutSpecialCharacter = replace(replace(replace(replace(resourceGroup().name, '.', ''), '(', ''), ')', ''), '_', '') // remove . () _ from resource group name
@@ -147,7 +147,7 @@ module certificates 'modules/_certForAppGateway.bicep' = {
   name: 'deploy-application-gateway-frontend-certificate'
   params:{
     keyVaultName: name_keyvault
-    subjectName:const_appGatewaySubjectName
+    subjectName: format('CN={0}', const_appGatewayDns)
     identity: {
       type: 'UserAssigned'
       userAssignedIdentities: {
