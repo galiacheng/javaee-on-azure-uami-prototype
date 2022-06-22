@@ -287,7 +287,7 @@ generate_sample_configurations
 
 echo "install weblogic operator"
 kubectl apply -f ${ymlOptNs}
-kubectl apply -f ${ymlOptNs}
+kubectl apply -f ${ymlOptSa}
 helm repo add weblogic-operator https://oracle.github.io/weblogic-kubernetes-operator/charts --force-update
 helm install weblogic-operator weblogic-operator/weblogic-operator \
     --namespace sample-weblogic-operator-ns \
@@ -296,6 +296,10 @@ helm install weblogic-operator weblogic-operator/weblogic-operator \
     --set "domainNamespaceSelectionStrategy=LabelSelector" \
     --set "domainNamespaceLabelSelector=weblogic-operator\=enabled" \
     --wait
+if [ $? -ne 0 ]; then 
+  echo "Failed to install Helm."
+  exit 1
+fi
 
 echo "install weblogic"
 kubectl apply -f ${ymlWlsNs}
