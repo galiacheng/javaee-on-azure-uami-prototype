@@ -157,6 +157,9 @@ module certificates 'modules/_certForAppGateway.bicep' = {
     location: location
     secretName: name_keyvaultSecretForAppGatewayFrontend
   }
+  dependsOn:[
+    keyvault
+  ]
 }
 
 module appGateway 'modules/_appgateway.bicep' = {
@@ -173,6 +176,7 @@ module appGateway 'modules/_appgateway.bicep' = {
   }
   dependsOn: [
     vnet
+    certificates
   ]
 }
 
