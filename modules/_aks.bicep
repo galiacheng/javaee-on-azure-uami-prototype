@@ -16,6 +16,7 @@ param uamiIdentifyId string
 @description('In addition to the CPU and memory metrics included in AKS by default, you can enable Container Insights for more comprehensive data on the overall performance and health of your cluster. Billing is based on data ingestion and retention settings.')
 param location string
 param vnetSubnetID string
+param utcValue string = utcNow()
 
 var const_aksAgentPoolOSDiskSizeGB = 128
 var const_aksAgentPoolMaxPods = 110
@@ -24,6 +25,8 @@ var const_aksAvailabilityZones = [
   '2'
   '3'
 ]
+var const_roleDefinitionIdOfContributor = 'b24988ac-6180-42a0-ab88-20f7382dd24c'
+var name_appGwContributorRoleAssignmentName = '${guid(concat(resourceGroup().id, utcValue, 'ForApplicationGateway'))}'
 
 resource aksCluster 'Microsoft.ContainerService/managedClusters@2021-02-01' = {
   name: clusterName
@@ -74,4 +77,17 @@ resource aksCluster 'Microsoft.ContainerService/managedClusters@2021-02-01' = {
       '${uamiIdentifyId}': {}
     }
   }
+}
+
+resource uamiRoleAssignment3 'Microsoft.Authorization/roleAssignments@2020-10-01-preview' = {
+  name: name_appGwContributorRoleAssignmentName
+  properties: {
+    description: 'Assign Resource Group Contributor role to User Assigned Managed Identity '
+    principalId: reference(aksCluster.id, '2020-12-01', 'Full').properties.addonProfiles.ingressApplicationGateway.identity.objectId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: resourceId('Microsoft.Authorization/roleDefinitions', const_roleDefinitionIdOfContributor)
+  }
+  dependsOn:[
+    aksCluster
+  ]
 }
