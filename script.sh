@@ -73,9 +73,10 @@ EOF
 
     cat <<EOF >${scriptDir}/${ymlOptSa}
 apiVersion: v1
-kind: Namespace
+kind: ServiceAccount
 metadata:
-  name: sample-weblogic-operator-ns
+  name: sample-weblogic-operator-sa
+  namespace: sample-weblogic-operator-ns
 EOF
 
     cat <<EOF >${scriptDir}/${ymlWlsNs}
@@ -227,7 +228,7 @@ spec:
                     - key: "weblogic.clusterName"
                       operator: In
                       values:
-                        - $(CLUSTER_NAME)
+                        - \$(CLUSTER_NAME)
                 topologyKey: "kubernetes.io/hostname"
     # The number of managed servers to start for this cluster
     replicas: 2
