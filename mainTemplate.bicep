@@ -1,5 +1,4 @@
 param utcValue string = utcNow()
-param storageAccountName string = 'stg${toLower(utcValue)}'
 param location string = 'eastus'
 
 // https://docs.microsoft.com/en-us/azure/role-based-access-control/built-in-roles
@@ -20,6 +19,7 @@ var name_domainLabelforApplicationGateway = '${take(concat('wlsonaks', take(utcV
 var name_keyvault = 'kv${uniqueString(utcValue)}'
 var name_keyvaultSecretForAppGatewayFrontend = 'myApplicationGatewayFrontendCert'
 var name_rgNameWithoutSpecialCharacter = replace(replace(replace(replace(resourceGroup().name, '.', ''), '(', ''), ')', ''), '_', '') // remove . () _ from resource group name
+var name_storageAccount = 'stg${toLower(utcValue)}'
 var ref_gatewayId = resourceId('Microsoft.Network/applicationGateways', name_applicationGatewayName)
 
 module partnerCenterPid './modules/_empty.bicep' = {
@@ -64,7 +64,7 @@ resource uamiForApplicationGateway 'Microsoft.ManagedIdentity/userAssignedIdenti
 }
 
 resource storageAccount 'Microsoft.Storage/storageAccounts@2021-02-01' = {
-  name: storageAccountName
+  name: name_storageAccount
   location: location
   kind: 'StorageV2'
   sku: {
@@ -225,7 +225,7 @@ resource deploymentScript 'Microsoft.Resources/deploymentScripts@2020-10-01' = {
     environmentVariables: [
       {
         name: 'NAME_STORAGE_ACCOUNT'
-        value: storageAccountName
+        value: name_storageAccount
       }
       {
         name: 'NAME_RESOURCE_GROUP'
