@@ -22,6 +22,10 @@ var name_keyvaultSecretForAppGatewayFrontend = 'myApplicationGatewayFrontendCert
 var name_rgNameWithoutSpecialCharacter = replace(replace(replace(replace(resourceGroup().name, '.', ''), '(', ''), ')', ''), '_', '') // remove . () _ from resource group name
 var ref_gatewayId = resourceId('Microsoft.Network/applicationGateways', name_applicationGatewayName)
 
+module partnerCenterPid './modules/_empty.bicep' = {
+  name: 'pid-cf7143e4-83ed-4b7e-ae86-1c5ecdd71bcb-partnercenter'
+} 
+
 // UAMI for deployment script
 resource uamiForDeploymentScript 'Microsoft.ManagedIdentity/userAssignedIdentities@2021-09-30-preview' = {
   name: name_deploymentScriptUserDefinedManagedIdentity
