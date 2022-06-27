@@ -290,13 +290,13 @@ EOF
 
 function install_helm() {
     # Install Helm
-    browserURL=$(curl -m ${curlMaxTime} -s https://api.github.com/repos/helm/helm/releases/latest |
+    local browserURL=$(curl -m ${curlMaxTime} -s https://api.github.com/repos/helm/helm/releases/latest |
         grep "browser_download_url.*linux-amd64.tar.gz.asc" |
         cut -d : -f 2,3 |
         tr -d \")
-    helmLatestVersion=${browserURL#*download\/}
-    helmLatestVersion=${helmLatestVersion%%\/helm*}
-    helmPackageName=helm-${helmLatestVersion}-linux-amd64.tar.gz
+    local helmLatestVersion=${browserURL#*download\/}
+    local helmLatestVersion=${helmLatestVersion%%\/helm*}
+    local helmPackageName=helm-${helmLatestVersion}-linux-amd64.tar.gz
     curl -m ${curlMaxTime} -fL https://get.helm.sh/${helmPackageName} -o /tmp/${helmPackageName}
     tar -zxvf /tmp/${helmPackageName} -C /tmp
     mv /tmp/linux-amd64/helm /usr/local/bin/helm
@@ -304,11 +304,105 @@ function install_helm() {
     helm version
 }
 
+function peer_aks_appgw_vnet() {
+  local aksMCRGName=$(az aks show -n $NAME_AKS_CLUSTER \
+    -g $NAME_AKS_CLUSTER_RG \
+    -o tsv --query "nodeResourceGroup")
+  local ret=$(az group exists -n ${aksMCRGName})
+  if [ "${ret,,}" == "false" ]; then
+      echo "AKS namaged resource group ${aksMCRGName} does not exist."
+      exit 1
+  fi
+
+  local aksNetWorkId=$(az resource list -g ${aksMCRGName} \
+    --resource-type Microsoft.Network/virtualNetworks \
+    -o tsv --query '[*].id')
+  local aksNetworkName=$(az resource list -g ${aksMCRGName} \
+    --resource-type Microsoft.Network/virtualNetworks \
+    -o tsv --query '[*].name')
+  local appGatewaySubnetId=$(az network application-gateway show \
+    -g ${NAME_RESOURCE_GROUP} \
+    --name ${NAME_APPLICATION_GATEWAY} \
+    -o tsv --query "gatewayIpConfigurations[0].subnet.id")
+  local appGatewayVnetResourceGroup=$(az network application-gateway show \
+    -g ${NAME_RESOURCE_GROUP} \
+    --name ${NAME_APPLICATION_GATEWAY} \
+    -o tsv --query "gatewayIpConfigurations[0].subnet.resourceGroup")
+  local appGatewaySubnetName=$(az resource show --ids ${appGatewaySubnetId} \
+    --query "name" -o tsv)
+  local appgwNetworkId=$(echo $appGatewaySubnetId | sed s/"\/subnets\/${appGatewaySubnetName}"//)
+  local appgwVnetName=$(az resource show --ids ${appgwNetworkId} --query "name" -o tsv)
+
+  local toPeer=true
+  # if the AKS and App Gateway have the same VNET, need not peer.
+  if [ "${aksNetWorkId}" == "${appgwNetworkId}" ]; then
+      echo "AKS and Application Gateway are in the same virtual network: ${appgwNetworkId}."
+      toPeer=false
+  fi
+
+  # check if the Vnets have been peered.
+  local ret=$(az network vnet peering list \
+      --resource-group ${appGatewayVnetResourceGroup} \
+      --vnet-name ${appgwVnetName} -o json \
+      | jq ".[] | select(.remoteVirtualNetwork.id==\"${aksNetWorkId}\")")
+  if [ -n "$ret" ]; then
+      echo "VNET of AKS ${aksNetWorkId} and Application Gateway ${appgwNetworkId} is peering."
+      toPeer=false
+  fi
+
+  if [ "${toPeer}" == "true" ]; then
+      az network vnet peering create \
+          --name aks-appgw-peer \
+          --remote-vnet ${aksNetWorkId} \
+          --resource-group ${appGatewayVnetResourceGroup} \
+          --vnet-name ${appgwVnetName} \
+          --allow-vnet-access
+
+      az network vnet peering create \
+          --name aks-appgw-peer \
+          --remote-vnet ${appgwNetworkId} \
+          --resource-group ${aksMCRGName} \
+          --vnet-name ${aksNetworkName} \
+          --allow-vnet-access
+  fi
+
+  # For Kubectl network plugin: https://azure.github.io/application-gateway-kubernetes-ingress/how-tos/networking/#with-kubenet
+  # find route table used by aks cluster
+  local routeTableId=$(az network route-table list -g $aksMCRGName --query "[].id | [0]" -o tsv)
+
+  # associate the route table to Application Gateway's subnet
+  az network vnet subnet update \
+      --ids $appGatewaySubnetId \
+      --route-table $routeTableId
+  
+  if [ $? -ne 0 ]; then
+    echo "Failed to associate the route table to Application Gateway's subnet"
+    exit 1
+  fi
+}
+
+function enable_agic() {
+  local appgwId=$(az network application-gateway show \
+    -n ${NAME_APPLICATION_GATEWAY} \
+    -g ${NAME_RESOURCE_GROUP} -o tsv --query "id")
+  az aks enable-addons -n ${NAME_AKS_CLUSTER} -g ${NAME_AKS_CLUSTER_RG} --addons ingress-appgw --appgw-id $appgwId
+  if [ $? -ne 0 ]; then
+    echo "Failed to enable AGIC"
+    exit 1
+  fi
+}
+
 az aks install-cli
 
 install_helm
 
-az aks get-credentials --resource-group ${NAME_RESOURCE_GROUP} --name ${NAME_AKS_CLUSTER}
+if [[ "${BOOL_CREATE_AKS,,}" == "false" ]]; then
+  az aks get-credentials --resource-group ${NAME_AKS_CLUSTER_RG} --name ${NAME_AKS_CLUSTER}
+  peer_aks_appgw_vnet
+  enable_agic
+else
+  az aks get-credentials --resource-group ${NAME_RESOURCE_GROUP} --name ${NAME_AKS_CLUSTER}
+fi
 
 generate_sample_configurations
 
