@@ -241,7 +241,7 @@ resource deployWlsAndIngress 'Microsoft.Resources/deploymentScripts@2020-10-01' 
       }
     ]
     scriptContent: loadTextContent('./script.sh')
-    cleanupPreference: 'OnExpiration'
+    cleanupPreference: 'OnSuccess'
     retentionInterval: 'P1D'
     forceUpdateTag: utcValue
   }
@@ -251,10 +251,10 @@ resource deployWlsAndIngress 'Microsoft.Resources/deploymentScripts@2020-10-01' 
   ]
 }
 
-module agicRoleAssignment 'modules/_agicRoleAssignment.bicep' = if (!createAKSCluster) {
+module agicRoleAssignment 'modules/_agicRoleAssignment.bicep' = {
   name: 'allow-agic-access-current-resource-group'
   params: {
-    aksClusterName: aksClusterName
+    aksClusterName: createAKSCluster ? name_aksClusterName : aksClusterName
     aksClusterRGName: createAKSCluster ? resourceGroup().name : aksClusterRGName
     roleDefinitionId: const_roleDefinitionIdOfContributor
   }
