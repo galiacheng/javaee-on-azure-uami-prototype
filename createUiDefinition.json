@@ -3,10 +3,45 @@
     "handler": "Microsoft.Azure.CreateUIDef",
     "version": "0.1.2-preview",
     "parameters": {
-        "basics": [ ],
-        "steps": [ ],
+        "basics": [
+			{
+                "name": "infoBox1",
+                "type": "Microsoft.Common.InfoBox",
+                "visible": true,
+                "options": {
+                    "icon": "Warning",
+                    "text": "You must fulfill one of the following prerequisites:<br> <li>You are <a href='https://docs.microsoft.com/en-us/azure/role-based-access-control/built-in-roles#contributor'>Contributor</a> and <a href='https://docs.microsoft.com/en-us/azure/role-based-access-control/built-in-roles#user-access-administrator'>User Access Administrator</a></li><li>You are <a href='https://docs.microsoft.com/en-us/azure/role-based-access-control/built-in-roles#owner'>Owner</a></li>"
+                }
+            },
+            {
+                "name": "selectExistingAks",
+                "type": "Microsoft.Common.CheckBox",
+                "label": "Select an existing AKS cluster",
+                "constraints": {
+                    "required": false
+                }
+            },
+            {
+                "name": "aksClusterSelector",
+                "type": "Microsoft.Solutions.ResourceSelector",
+                "label": "Select AKS cluster",
+                "toolTip": "Select the existing AKS cluster.",
+                "resourceType": "Microsoft.ContainerService/managedClusters",
+                "options": {
+                    "filter": {
+                        "subscription": "onBasics",
+                        "location": "onBasics"
+                    }
+                },
+                "visible": "[bool(basics('selectExistingAks'))]"
+            }
+        ],
+        "steps": [],
         "outputs": {
-            "location": "[location()]"
+            "location": "[location()]",
+            "aksClusterName": "[last(split(basics('aksClusterSelector').id, '/'))]",
+            "aksClusterRGName": "[last(take(split(basics('aksClusterSelector').id, '/'), 5))]",
+            "createAKSCluster": "[not(bool(basics('selectExistingAks')))]"
         }
     }
 }

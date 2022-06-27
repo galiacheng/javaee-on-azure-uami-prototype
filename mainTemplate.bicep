@@ -1,21 +1,21 @@
+param aksClusterName string = 'foo-cluster'
+param aksClusterRGName string = 'foo-rg'
+param createAKSCluster bool = true
 param utcValue string = utcNow()
 param location string = 'eastus'
 
 // https://docs.microsoft.com/en-us/azure/role-based-access-control/built-in-roles
-var const_azcliVersion = '2.15.0'
-var const_appGatewayDns = '${format('{0}.{1}.{2}', name_domainLabelforApplicationGateway, location, 'cloudapp.azure.com')}'
+var const_azcliVersion = '2.33.1'
+var const_appGatewayDns = format('{0}.{1}.{2}', name_domainLabelforApplicationGateway, location, 'cloudapp.azure.com')
 var const_roleDefinitionIdOfContributor = 'b24988ac-6180-42a0-ab88-20f7382dd24c'
 var const_sku = 'Standard_LRS'
-var name_aksClusterName = 'wlsaks${uniqueString(utcValue)}'
-var name_aksContributorRoleAssignmentName = '${guid(concat(resourceGroup().id, name_aksUserDefinedManagedIdentity, 'ForAKSCluster'))}'
-var name_aksUserDefinedManagedIdentity = 'wls-aks-kubernetes-user-defined-managed-itentity'
+var name_aksClusterName = createAKSCluster ? 'wlsaks${uniqueString(utcValue)}' : aksClusterName
 var name_applicationGatewayName = 'appgw${uniqueString(utcValue)}'
 var name_applicationGatewayUserDefinedManagedIdentity = 'wls-aks-application-gateway-user-defined-managed-itentity'
-
 var name_certForApplicationGatwayFrontend = 'appGatewaySslCert'
 var name_deploymentScriptUserDefinedManagedIdentity = 'wls-aks-deployment-script-user-defined-managed-itentity'
-var name_deploymentScriptContributorRoleAssignmentName = '${guid(concat(resourceGroup().id, name_deploymentScriptUserDefinedManagedIdentity, 'ForAKSCluster'))}'
-var name_domainLabelforApplicationGateway = '${take(concat('wlsonaks', take(utcValue, 6), '-', toLower(name_rgNameWithoutSpecialCharacter)), 63)}'
+var name_deploymentScriptContributorRoleAssignmentName = guid('${resourceGroup().id}${name_deploymentScriptUserDefinedManagedIdentity}Deployment Script in Current Resource Group')
+var name_domainLabelforApplicationGateway = take('wlsonaks${take(utcValue, 6)}-${toLower(name_rgNameWithoutSpecialCharacter)}', 63)
 var name_keyvault = 'kv${uniqueString(utcValue)}'
 var name_keyvaultSecretForAppGatewayFrontend = 'myApplicationGatewayFrontendCert'
 var name_rgNameWithoutSpecialCharacter = replace(replace(replace(replace(resourceGroup().name, '.', ''), '(', ''), ')', ''), '_', '') // remove . () _ from resource group name
@@ -24,36 +24,26 @@ var ref_gatewayId = resourceId('Microsoft.Network/applicationGateways', name_app
 
 module partnerCenterPid './modules/_empty.bicep' = {
   name: 'pid-cf7143e4-83ed-4b7e-ae86-1c5ecdd71bcb-partnercenter'
-} 
+}
 
 // UAMI for deployment script
 resource uamiForDeploymentScript 'Microsoft.ManagedIdentity/userAssignedIdentities@2021-09-30-preview' = {
   name: name_deploymentScriptUserDefinedManagedIdentity
   location: location
 }
-resource deploymentScriptUAMICotibutorRoleAssignment 'Microsoft.Authorization/roleAssignments@2020-10-01-preview' = {
+
+resource contributorRoleDefinitioninSubScope 'Microsoft.Authorization/roleDefinitions@2018-01-01-preview' existing = {
+  scope: subscription()
+  name: const_roleDefinitionIdOfContributor
+}
+
+// Assin Contributor role in Subscription scope, we need the permission to get/update resource cross resource group.
+module deploymentScriptUAMICotibutorRoleAssignment 'modules/_roleAssignmentinSubscription.bicep' = {
   name: name_deploymentScriptContributorRoleAssignmentName
-  properties: {
-    description: 'Assign Resource Group Contributor role to User Assigned Managed Identity '
+  scope: subscription()
+  params: {
+    roleDefinitionId: const_roleDefinitionIdOfContributor
     principalId: reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', name_deploymentScriptUserDefinedManagedIdentity)).principalId
-    principalType: 'ServicePrincipal'
-    roleDefinitionId: resourceId('Microsoft.Authorization/roleDefinitions', const_roleDefinitionIdOfContributor)
-  }
-}
-
-// UAMI for AKS
-resource uamiForAks 'Microsoft.ManagedIdentity/userAssignedIdentities@2021-09-30-preview' = {
-  name: name_aksUserDefinedManagedIdentity
-  location: location
-}
-
-resource aksUAMICotibutorRoleAssignment 'Microsoft.Authorization/roleAssignments@2020-10-01-preview' = {
-  name: name_aksContributorRoleAssignmentName
-  properties: {
-    description: 'Assign Resource Group Contributor role to User Assigned Managed Identity '
-    principalId: reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', name_aksUserDefinedManagedIdentity)).principalId
-    principalType: 'ServicePrincipal'
-    roleDefinitionId: resourceId('Microsoft.Authorization/roleDefinitions', const_roleDefinitionIdOfContributor)
   }
 }
 
@@ -144,13 +134,14 @@ resource keyvault 'Microsoft.KeyVault/vaults@2021-10-01' = {
 module vnet 'modules/_vnet.bicep' = {
   name: 'deploy-application-gateway-vnet'
   params: {
+    createAKSCluster: createAKSCluster
     location: location
   }
 }
 
 module certificates 'modules/_certForAppGateway.bicep' = {
   name: 'deploy-application-gateway-frontend-certificate'
-  params:{
+  params: {
     keyVaultName: name_keyvault
     subjectName: format('CN={0}', const_appGatewayDns)
     identity: {
@@ -162,7 +153,7 @@ module certificates 'modules/_certForAppGateway.bicep' = {
     location: location
     secretName: name_keyvaultSecretForAppGatewayFrontend
   }
-  dependsOn:[
+  dependsOn: [
     keyvault
   ]
 }
@@ -175,7 +166,7 @@ module appGateway 'modules/_appgateway.bicep' = {
     gatewayName: name_applicationGatewayName
     gatewaySubnetId: vnet.outputs.subIdForApplicationGateway
     gatwaySslCertName: name_certForApplicationGatwayFrontend
-    keyVaultSecretId: concat(reference(name_keyvault).vaultUri, 'secrets/${name_keyvaultSecretForAppGatewayFrontend}')
+    keyVaultSecretId: '${reference(name_keyvault).vaultUri}secrets/${name_keyvaultSecretForAppGatewayFrontend}'
     uamiId: uamiForApplicationGateway.id
     staticPrivateFrontentIP: ''
   }
@@ -185,12 +176,11 @@ module appGateway 'modules/_appgateway.bicep' = {
   ]
 }
 
-module aks 'modules/_aks.bicep' = {
+module aks 'modules/_aks.bicep' = if (createAKSCluster) {
   name: 'deploy-aks'
   params: {
     clusterName: name_aksClusterName
     location: location
-    uamiIdentifyId: uamiForAks.id
     ingressApplicationGateway: {
       enabled: true
       config: {
@@ -205,13 +195,12 @@ module aks 'modules/_aks.bicep' = {
     vnetSubnetID: vnet.outputs.subIdForAKS
   }
   dependsOn: [
-    aksUAMICotibutorRoleAssignment
     appGateway
   ]
 }
 
 resource deploymentScript 'Microsoft.Resources/deploymentScripts@2020-10-01' = {
-  name: 'deployment-script'
+  name: 'ds-deploy-wls-and-azure-ingress'
   location: location
   kind: 'AzureCLI'
   identity: {
@@ -236,8 +225,20 @@ resource deploymentScript 'Microsoft.Resources/deploymentScripts@2020-10-01' = {
         value: name_aksClusterName
       }
       {
+        name: 'NAME_AKS_CLUSTER_RG'
+        value: aksClusterRGName
+      }
+      {
+        name: 'NAME_APPLICATION_GATEWAY'
+        value: name_applicationGatewayName
+      }
+      {
         name: 'NAME_APPGATEWAY_FRONTEND_CERT'
         value: name_certForApplicationGatwayFrontend
+      }
+      {
+        name: 'BOOL_CREATE_AKS'
+        value: string(createAKSCluster)
       }
     ]
     scriptContent: loadTextContent('./script.sh')
@@ -246,6 +247,7 @@ resource deploymentScript 'Microsoft.Resources/deploymentScripts@2020-10-01' = {
     forceUpdateTag: utcValue
   }
   dependsOn: [
+    deploymentScriptUAMICotibutorRoleAssignment
     aks
   ]
 }

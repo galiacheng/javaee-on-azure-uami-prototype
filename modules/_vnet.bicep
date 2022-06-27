@@ -1,6 +1,7 @@
 // Copyright (c) 2021, Oracle Corporation and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
+param createAKSCluster bool
 param location string
 param vnetForApplicationGateway object = {
   name: 'wlsaks-app-gateway-vnet'
@@ -33,6 +34,37 @@ var name_nsg = 'wlsaks-nsg-${uniqueString(utcValue)}'
 var name_subnet = vnetForApplicationGateway.subnets.gatewaySubnet.name
 var name_aksSubnet = vnetForApplicationGateway.subnets.aksSubnet.name
 var name_vnet = vnetForApplicationGateway.name
+var obj_onesubnet = [
+  {
+    name: name_subnet
+    properties: {
+      addressPrefix: const_subnetAddressPrefixes
+      networkSecurityGroup: {
+        id: nsg.id
+      }
+    }
+  }
+]
+var obj_twosubnet = [
+  {
+    name: name_subnet
+    properties: {
+      addressPrefix: const_subnetAddressPrefixes
+      networkSecurityGroup: {
+        id: nsg.id
+      }
+    }
+  }
+  {
+    name: name_aksSubnet
+    properties: {
+      addressPrefix: const_aksSubnetAddressPrefixes
+      networkSecurityGroup: {
+        id: nsg.id
+      }
+    }
+  }
+]
 
 // Create new network security group.
 resource nsg 'Microsoft.Network/networkSecurityGroups@2021-08-01' = if (const_newVnet) {
@@ -81,28 +113,9 @@ resource newVnet 'Microsoft.Network/virtualNetworks@2021-08-01' = if (const_newV
     addressSpace: {
       addressPrefixes: const_vnetAddressPrefixes
     }
-    subnets: [
-      {
-        name: name_subnet
-        properties: {
-          addressPrefix: const_subnetAddressPrefixes
-          networkSecurityGroup: {
-            id: nsg.id
-          }
-        }
-      }
-      {
-        name: name_aksSubnet
-        properties: {
-          addressPrefix: const_aksSubnetAddressPrefixes
-          networkSecurityGroup: {
-            id: nsg.id
-          }
-        }
-      }
-    ]
+    subnets: createAKSCluster ? obj_twosubnet : obj_onesubnet
   }
 }
 
 output subIdForApplicationGateway string = resourceId('Microsoft.Network/virtualNetworks/subnets', name_vnet, name_subnet)
-output subIdForAKS string = resourceId('Microsoft.Network/virtualNetworks/subnets', name_vnet, name_aksSubnet)
+output subIdForAKS string = createAKSCluster ? resourceId('Microsoft.Network/virtualNetworks/subnets', name_vnet, name_aksSubnet) : ''
