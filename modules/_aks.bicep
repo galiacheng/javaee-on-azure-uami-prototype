@@ -25,9 +25,9 @@ var const_aksAvailabilityZones = [
   '3'
 ]
 var const_roleDefinitionIdOfContributor = 'b24988ac-6180-42a0-ab88-20f7382dd24c'
-var name_aksContributorRoleAssignmentName = '${guid(concat(resourceGroup().id, name_aksUserDefinedManagedIdentity, 'ForAKSCluster'))}'
+var name_aksContributorRoleAssignmentName = guid('${resourceGroup().id}${name_aksUserDefinedManagedIdentity}ForAKSCluster')
 var name_aksUserDefinedManagedIdentity = 'wls-aks-kubernetes-user-defined-managed-itentity'
-var name_appGwContributorRoleAssignmentName = '${guid(concat(resourceGroup().id, utcValue, 'ForApplicationGateway'))}'
+var name_appGwContributorRoleAssignmentName = guid('${resourceGroup().id}${utcValue}ForApplicationGateway')
 
 // UAMI for AKS
 resource uamiForAks 'Microsoft.ManagedIdentity/userAssignedIdentities@2021-09-30-preview' = {
@@ -49,7 +49,7 @@ resource aksCluster 'Microsoft.ContainerService/managedClusters@2021-02-01' = {
   name: clusterName
   location: location
   properties: {
-    kubernetesVersion: '${aksVersion}'
+    kubernetesVersion: aksVersion
     dnsPrefix: '${clusterName}-dns'
     agentPoolProfiles: [
       {
@@ -99,7 +99,7 @@ resource aksCluster 'Microsoft.ContainerService/managedClusters@2021-02-01' = {
   ]
 }
 
-resource uamiRoleAssignment3 'Microsoft.Authorization/roleAssignments@2020-10-01-preview' = {
+resource agicUamiRoleAssignment 'Microsoft.Authorization/roleAssignments@2020-10-01-preview' = {
   name: name_appGwContributorRoleAssignmentName
   properties: {
     description: 'Assign Resource Group Contributor role to User Assigned Managed Identity '
@@ -107,7 +107,4 @@ resource uamiRoleAssignment3 'Microsoft.Authorization/roleAssignments@2020-10-01
     principalType: 'ServicePrincipal'
     roleDefinitionId: resourceId('Microsoft.Authorization/roleDefinitions', const_roleDefinitionIdOfContributor)
   }
-  dependsOn: [
-    aksCluster
-  ]
 }

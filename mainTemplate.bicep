@@ -199,7 +199,7 @@ module aks 'modules/_aks.bicep' = if (createAKSCluster) {
   ]
 }
 
-resource deploymentScript 'Microsoft.Resources/deploymentScripts@2020-10-01' = {
+resource deployWlsAndIngress 'Microsoft.Resources/deploymentScripts@2020-10-01' = {
   name: 'ds-deploy-wls-and-azure-ingress'
   location: location
   kind: 'AzureCLI'
@@ -249,5 +249,17 @@ resource deploymentScript 'Microsoft.Resources/deploymentScripts@2020-10-01' = {
   dependsOn: [
     deploymentScriptUAMICotibutorRoleAssignment
     aks
+  ]
+}
+
+module agicRoleAssignment 'modules/_agicRoleAssignment.bicep' = if (!createAKSCluster) {
+  name: 'allow-agic-access-current-resource-group'
+  params: {
+    aksClusterName: aksClusterName
+    aksClusterRGName: aksClusterRGName
+    roleDefinitionId: const_roleDefinitionIdOfContributor
+  }
+  dependsOn: [
+    deployWlsAndIngress
   ]
 }
