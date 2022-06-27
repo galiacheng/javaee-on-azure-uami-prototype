@@ -432,7 +432,7 @@ spec:
   - nobrl
 EOF
 
-  cat <<EOF >pcv.yaml
+  cat <<EOF >pvc.yaml
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
