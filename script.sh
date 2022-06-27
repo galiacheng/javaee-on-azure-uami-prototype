@@ -11,6 +11,7 @@ ymlWlsWdtSecret="wls-wdt-k8s-secret.yaml"
 ymlWlsAdminAccountSecret="wls-admin-k8s-secret.yaml"
 ymlWlsDomain="wls-domain.yaml"
 curlMaxTime=120
+wlsDomainNS="${wlsDomainNS}"
 
 function generate_sample_configurations() {
     cat <<EOF >${scriptDir}/${ymlIngressWlsAdmin}
@@ -18,7 +19,7 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: azure-ingress-wls-admin-server
-  namespace: sample-domain1-ns
+  namespace: ${wlsDomainNS}
   labels:
     weblogic.domainUID: "sample-domain1"
     azure.weblogic.target: "admin-server"
@@ -43,7 +44,7 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: azure-ingress-wls-cluster-1
-  namespace: sample-domain1-ns
+  namespace: ${wlsDomainNS}
   labels:
     weblogic.domainUID: "sample-domain1"
     azure.weblogic.target: "cluster-1"
@@ -68,7 +69,7 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: azure-ingress-ssl-wls-cluster-1
-  namespace: sample-domain1-ns
+  namespace: ${wlsDomainNS}
   labels:
     weblogic.domainUID: "sample-domain1"
     azure.weblogic.target: "cluster-1"
@@ -109,7 +110,7 @@ EOF
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: sample-domain1-ns
+  name: ${wlsDomainNS}
   labels:
     weblogic-operator: "enabled"
 EOF
@@ -121,7 +122,7 @@ metadata:
   labels:
     weblogic.domainUID: "sample-domain1"
   name: sample-domain1-runtime-encryption-secret
-  namespace: sample-domain1-ns
+  namespace: ${wlsDomainNS}
 data:
   password: QVBCOWZhVEhBUEI5ZmFUSA==
 type: Opaque
@@ -134,7 +135,7 @@ metadata:
   labels:
     weblogic.domainUID: "sample-domain1"
   name: sample-domain1-weblogic-credentials
-  namespace: sample-domain1-ns
+  namespace: ${wlsDomainNS}
 data:
   username: d2VibG9naWM=
   password: QVBCOWZhVEhBUEI5ZmFUSA==
@@ -151,7 +152,7 @@ apiVersion: "weblogic.oracle/v8"
 kind: Domain
 metadata:
   name: sample-domain1
-  namespace: sample-domain1-ns
+  namespace: ${wlsDomainNS}
   labels:
     weblogic.domainUID: sample-domain1
 
@@ -182,11 +183,11 @@ spec:
   includeServerOutInPodLog: true
 
   # Whether to enable overriding your log file location, see also 'logHome'
-  #logHomeEnabled: false
+  logHomeEnabled: true
   
   # The location for domain log, server logs, server out, introspector out, and Node Manager log files
   # see also 'logHomeEnabled', 'volumes', and 'volumeMounts'.
-  #logHome: /shared/logs/sample-domain1
+  logHome: /shared/logs/sample-domain1
   
   # Set which WebLogic Servers the Operator will start
   # - "NEVER" will not start any server in the domain
@@ -214,13 +215,13 @@ spec:
         memory: "1.5Gi"
 
     # Optional volumes and mounts for the domain's pods. See also 'logHome'.
-    #volumes:
-    #- name: weblogic-domain-storage-volume
-    #  persistentVolumeClaim:
-    #    claimName: sample-domain1-weblogic-sample-pvc
-    #volumeMounts:
-    #- mountPath: /shared
-    #  name: weblogic-domain-storage-volume
+    volumes:
+    - name: weblogic-domain-storage-volume
+      persistentVolumeClaim:
+        claimName: azure-smb-pvc
+    volumeMounts:
+    - mountPath: /shared
+      name: weblogic-domain-storage-volume
 
   # The desired behavior for starting the domain's administration server.
   adminServer:
@@ -392,6 +393,67 @@ function enable_agic() {
   fi
 }
 
+function enable_storage() {
+  echo "create pv/pvc."
+  local storageAccountKey=$(az storage account keys list \
+    --resource-group $NAME_RESOURCE_GROUP \
+    --account-name $NAME_STORAGE_ACCOUNT --query "[0].value" -o tsv)
+  local azureSecretName="azure-secret"
+  kubectl -n ${wlsDomainNS} create secret generic ${azureSecretName} \
+      --from-literal=azurestorageaccountname=${storageAccountName} \
+      --from-literal=azurestorageaccountkey=${storageAccountKey}
+
+  cat <<EOF >pv.yaml
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: azure-smb-pv
+  labels:
+    storageAccount: ${NAME_STORAGE_ACCOUNT}
+spec:
+  capacity:
+    storage: 5Gi
+  accessModes:
+    - ReadWriteMany
+  storageClassName: azurefile
+  claimRef:
+    name: azure-smb-pvc
+    namespace: ${wlsDomainNS}
+  azureFile:
+    secretName: ${azureSecretName}
+    shareName: weblogic
+    readOnly: false
+  mountOptions:
+  - dir_mode=0777
+  - file_mode=0777
+  - uid=1000
+  - gid=1000
+  - mfsymlinks
+  - nobrl
+EOF
+
+  cat <<EOF >pcv.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: azure-smb-pvc
+  namespace: ${wlsDomainNS}
+  labels:
+    storageAccount: ${NAME_STORAGE_ACCOUNT}
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: azurefile
+  resources:
+    requests:
+      storage: 5Gi
+EOF
+
+  kubectl apply -f pv.yaml
+  kubectl apply -f pvc.yaml
+}
+
+#main script
 az aks install-cli
 
 install_helm
@@ -403,6 +465,8 @@ if [[ "${BOOL_CREATE_AKS,,}" == "false" ]]; then
 else
   az aks get-credentials --resource-group ${NAME_RESOURCE_GROUP} --name ${NAME_AKS_CLUSTER}
 fi
+
+enable_storage
 
 generate_sample_configurations
 

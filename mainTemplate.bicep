@@ -37,7 +37,7 @@ resource contributorRoleDefinitioninSubScope 'Microsoft.Authorization/roleDefini
   name: const_roleDefinitionIdOfContributor
 }
 
-// Assin Contributor role in Subscription scope, we need the permission to get/update resource cross resource group.
+// Assin Contributor role in subscription scope, we need the permission to get/update resource cross resource group.
 module deploymentScriptUAMICotibutorRoleAssignment 'modules/_roleAssignmentinSubscription.bicep' = {
   name: name_deploymentScriptContributorRoleAssignmentName
   scope: subscription()
@@ -59,7 +59,6 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2021-02-01' = {
   kind: 'StorageV2'
   sku: {
     name: const_sku
-    tier: 'Standard'
   }
   properties: {
     networkAcls: {
@@ -256,7 +255,7 @@ module agicRoleAssignment 'modules/_agicRoleAssignment.bicep' = if (!createAKSCl
   name: 'allow-agic-access-current-resource-group'
   params: {
     aksClusterName: aksClusterName
-    aksClusterRGName: aksClusterRGName
+    aksClusterRGName: createAKSCluster ? resourceGroup().name : aksClusterRGName
     roleDefinitionId: const_roleDefinitionIdOfContributor
   }
   dependsOn: [
