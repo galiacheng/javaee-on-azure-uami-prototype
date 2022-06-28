@@ -44,6 +44,10 @@ az deployment group create -f mainTemplate.bicep \
     --parameters aksClusterName=javaeeUamiTestWlsOnAks aksClusterRGName=javaee-on-azure-uami-prototype-rg createAKSCluster=false
 ```
 
+### Access application
+
+Url for test application: `http://<appgw-ip>/testwebapp/` and `https://<appgw-ip>/testwebapp/`
+
 ## Design details
 
 ### Senarios
