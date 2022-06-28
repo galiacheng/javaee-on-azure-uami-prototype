@@ -3,7 +3,7 @@ This sample is to demostrate how to leverage Azure User Assigned Managed Identif
 - Run Oracle WebLogic Server on AKS and expose WebLogic with Application Gateway Ingress Controller (AGIC)
 - Store certifcates in Key Vault and store WebLogic logs in Storage Account SMB file share
 - Use UAMI to connect AGIC with Application Gateway
-- Use UAMI to connect Key Vaule with Application Gateway
+- Use UAMI to connect Application Gateway with Key Vaule
 - Use UAMI to connet Deployment Script with Azure resources
 
 
@@ -91,6 +91,12 @@ Here list key managed identity used in the prototype. Terms and phrases used in 
 Note: manged identity `ingressapplicationgateway-*` is created by command `az aks enable-addons -n ${NAME_AKS_CLUSTER} -g ${NAME_AKS_CLUSTER_RG} --addons ingress-appgw --appgw-id $appgwId`, the command does not support specifying a managed identity.
 
 #### Workflow
+
+![UAMI workflow with new AKS cluster](images/new-aks.png "UAMI workflow with new AKS cluster")
+
+![UAMI workflow with new AKS cluster](images/bring-aks.png "UAMI workflow with existing AKS cluster")
+
+## Useful Bicep usage for role assignments
 
 
 
