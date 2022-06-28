@@ -453,6 +453,15 @@ EOF
   kubectl apply -f pvc.yaml
 }
 
+function enable_aks_identity() {
+  local identityLength=$(az aks show -g ${NAME_AKS_CLUSTER_RG} -n ${NAME_AKS_CLUSTER} | jq '.identity | length')
+  if [ $identityLength -lt 1 ]; then
+    # Your cluster is using service principal, and you are going to update the cluster to use systemassigned managed identity.
+    # After updating, your cluster's control plane and addon pods will switch to use managed identity, but kubelet will KEEP USING SERVICE PRINCIPAL until you upgrade your agentpool.
+    az aks update -g ${NAME_AKS_CLUSTER_RG} -n ${NAME_AKS_CLUSTER} --enable-managed-identity
+  fi
+}
+
 #main script
 az aks install-cli
 
@@ -460,6 +469,7 @@ install_helm
 
 if [[ "${BOOL_CREATE_AKS,,}" == "false" ]]; then
   az aks get-credentials --resource-group ${NAME_AKS_CLUSTER_RG} --name ${NAME_AKS_CLUSTER}
+  enable_aks_identity
   peer_aks_appgw_vnet
   enable_agic
 else
