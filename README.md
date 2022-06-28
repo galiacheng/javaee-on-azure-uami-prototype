@@ -96,11 +96,37 @@ Note: manged identity `ingressapplicationgateway-*` is created by command `az ak
 
 ![UAMI workflow with new AKS cluster](images/new-aks.png "UAMI workflow with new AKS cluster")
 
--UAMI workflow of bringing existing AKS cluster
+- UAMI workflow of bringing existing AKS cluster
 
 ![UAMI workflow with new AKS cluster](images/bring-aks.png "UAMI workflow with existing AKS cluster")
 
 ## Useful Bicep usage for role assignments
+
+1. Assign roles across resource group
+
+    ```bicep
+    module roleAssignment 'modules/_roleAssignmentCrossResourceGroup.bicep' = {
+        name: 'assign-role'
+        scope: resourceGroup(<your-resource-group-name>)
+        params: {
+            roleDefinitionId: roleDefinitionId
+            principalId: principalId
+        }
+    }
+    ```
+
+1. Assign roles in subscription
+
+    ```bicep
+    module roleAssignment 'modules/_roleAssignmentinSubscription.bicep' = {
+        name: 'assign-role'
+        scope: subscription()
+        params: {
+            roleDefinitionId: roleDefinitionId
+            principalId: principalId
+        }
+    }
+    ```
 
 
 
