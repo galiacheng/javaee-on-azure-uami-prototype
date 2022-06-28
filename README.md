@@ -71,7 +71,7 @@ URLs for test application: `http://<appgw-ip>/testwebapp/` and `https://<appgw-i
 
 | Resources | Use Cases |
 |---|---|
-| AKS | 1. Create a new AKS with system managed identity enable. <br> 2. Support existing AKS cluster of different auth mode: <br> &nbsp; - User assigned managed identity. <br> &nbsp; - System assigned managed identity. <br> &nbsp; - Service principal |
+| AKS | 1. Create a new AKS with system managed identity enable. <br> 2. Bring an existing AKS cluster of different auth mode: <br> &nbsp; - User assigned managed identity. <br> &nbsp; - System assigned managed identity. <br> &nbsp; - Service principal |
 | Key Vault| Auto generate a self-signed certificate for Application SSL/TLS termination, and store it in the key vault. |
 | Application Gateway | 1. Expose workload with HTTP. <br> 2. Expose workload with HTTPS. |
 | Storage | Enable AKS PV on a SMB file share. |
@@ -98,7 +98,11 @@ Here list key managed identity used in the prototype. Terms and phrases used in 
 | `wls-aks-application-gateway-user-defined-managed-itentity` | User Assigned | Current resource group| Contributor | Current resource group | 1. To access key vault for SSL certificate of Application Gateway.  |
 | `ingressapplicationgateway-*` | User Assigned | AKS Node resource group | Contributor | Current resource group | 1. Connect ACIG and Application Gateway. |
 
-Note: manged identity `ingressapplicationgateway-*` is created by command `az aks enable-addons -n ${NAME_AKS_CLUSTER} -g ${NAME_AKS_CLUSTER_RG} --addons ingress-appgw --appgw-id $appgwId`, the command does not support specifying a managed identity.
+Note: manged identity `ingressapplicationgateway-*` is created by the following command, the command does not support specifying a managed identity.
+
+```shell
+az aks enable-addons -n ${NAME_AKS_CLUSTER} -g ${NAME_AKS_CLUSTER_RG} --addons ingress-appgw --appgw-id $appgwId
+```
 
 #### UAMI Workflow
 
