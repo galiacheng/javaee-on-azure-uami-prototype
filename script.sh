@@ -455,10 +455,12 @@ EOF
 
 function enable_aks_identity() {
   local identityLength=$(az aks show -g ${NAME_AKS_CLUSTER_RG} -n ${NAME_AKS_CLUSTER} | jq '.identity | length')
+  echo "identityLength ${identityLength}"
   if [ $identityLength -lt 1 ]; then
+    echo "enable managed identity..."
     # Your cluster is using service principal, and you are going to update the cluster to use systemassigned managed identity.
     # After updating, your cluster's control plane and addon pods will switch to use managed identity, but kubelet will KEEP USING SERVICE PRINCIPAL until you upgrade your agentpool.
-    az aks update -g ${NAME_AKS_CLUSTER_RG} -n ${NAME_AKS_CLUSTER} --enable-managed-identity
+    az aks update -y -g ${NAME_AKS_CLUSTER_RG} -n ${NAME_AKS_CLUSTER} --enable-managed-identity
   fi
 }
 
