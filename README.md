@@ -1,17 +1,17 @@
-This sample is to demostrate how to leverage Azure User Assigned Managed Identify (UAMI) to connect Azure resources; make those resources to serve as infrustracture that are able to run and expose Oracle WebLogic Server.  Including:
+This sample is to demonstrate how to leverage Azure User Assigned Managed Identify (UAMI) to connect Azure resources; make those resources to serve as infrastructure that are able to run and expose Oracle WebLogic Server.  Including:
 
 - Run Oracle WebLogic Server on AKS and expose WebLogic with Application Gateway Ingress Controller (AGIC)
-- Store certifcates in Key Vault and store WebLogic logs in Storage Account SMB file share
+- Store certificates in Key Vault and store WebLogic logs in Storage Account SMB file share
 - Use UAMI to connect AGIC with Application Gateway
-- Use UAMI to connect Application Gateway with Key Vaule
-- Use UAMI to connet Deployment Script with Azure resources
+- Use UAMI to connect Application Gateway with Key Vault
+- Use UAMI to connect Deployment Script with Azure resources
 
 ## Contents
 
 - [Prerequisites](#prerequisites)
 - [Run with Azure CLI](#run-with-azure-cli)
 - [Design details](#design-details)
-  - [Senarios](#senarios)
+  - [Scenarios](#scenarios)
   - [Managed Identity and Roles](#managed-identity-and-roles)
   - [UAMI workflow](#uami-workflow)
 - [Useful Bicep usage for role assignments](#useful-bicep-usage-for-role-assignments)
@@ -19,15 +19,15 @@ This sample is to demostrate how to leverage Azure User Assigned Managed Identif
 
 ## Prerequisites
 
-To deploy the sample, you must meet one of the following subscription permission: 
-- [Contributor](https://docs.microsoft.com/en-us/azure/role-based-access-control/built-in-roles#contributor) + [User Access Administrator](https://docs.microsoft.com/en-us/azure/role-based-access-control/built-in-roles#user-access-administrator) (Both are subsrciption roles, not AAD roles.)
+To deploy the sample, you must meet one of the following subscription permissions: 
+- [Contributor](https://docs.microsoft.com/en-us/azure/role-based-access-control/built-in-roles#contributor) + [User Access Administrator](https://docs.microsoft.com/en-us/azure/role-based-access-control/built-in-roles#user-access-administrator) (Both are subscription roles, not AAD roles.)
 - [Owner](https://docs.microsoft.com/en-us/azure/role-based-access-control/built-in-roles#owner)
 
 ## Run with Azure CLI
 
 ### Run the sample with a new AKS cluster
 
-Create a resourc group:
+Create a resource group:
 
 ```bash
 az group create -n javaee-on-azure-uami-prototype-rg -l eastus
@@ -41,7 +41,7 @@ az deployment group create -f mainTemplate.bicep -g javaee-on-azure-uami-prototy
 
 ### Run the sample with an existing AKS cluster
 
-Create a resourc group:
+Create a resource group:
 
 ```bash
 az group create -n javaee-on-azure-uami-prototype-rg -l eastus
@@ -63,11 +63,11 @@ az deployment group create -f mainTemplate.bicep \
 
 ### Access application
 
-Url for test application: `http://<appgw-ip>/testwebapp/` and `https://<appgw-ip>/testwebapp/`
+URLs for test application: `http://<appgw-ip>/testwebapp/` and `https://<appgw-ip>/testwebapp/`
 
 ## Design details
 
-### Senarios
+### Scenarios
 
 | Resources | Use Cases |
 |---|---|
@@ -102,7 +102,7 @@ Note: manged identity `ingressapplicationgateway-*` is created by command `az ak
 
 #### UAMI Workflow
 
-- UAMI workflow of createing new AKS cluster
+- UAMI workflow of creating new AKS cluster
 
 ![UAMI workflow with new AKS cluster](images/new-aks.png "UAMI workflow with new AKS cluster")
 
