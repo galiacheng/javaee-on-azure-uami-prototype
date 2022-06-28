@@ -6,6 +6,16 @@ This sample is to demostrate how to leverage Azure User Assigned Managed Identif
 - Use UAMI to connect Application Gateway with Key Vaule
 - Use UAMI to connet Deployment Script with Azure resources
 
+## Contents
+
+- [Prerequisites](#prerequisites)
+- [Run with Azure CLI](#run-with-azure-cli)
+- [Design details](#design-details)
+  - [Senarios](#senarios)
+  - [Managed Identity and Roles](#managed-identity-and-roles)
+  - [UAMI workflow](#uami-workflow)
+- [Useful Bicep usage for role assignments](#useful-bicep-usage-for-role-assignments)
+
 
 ## Prerequisites
 
@@ -90,7 +100,7 @@ Here list key managed identity used in the prototype. Terms and phrases used in 
 
 Note: manged identity `ingressapplicationgateway-*` is created by command `az aks enable-addons -n ${NAME_AKS_CLUSTER} -g ${NAME_AKS_CLUSTER_RG} --addons ingress-appgw --appgw-id $appgwId`, the command does not support specifying a managed identity.
 
-#### Workflow
+#### UAMI Workflow
 
 - UAMI workflow of createing new AKS cluster
 
