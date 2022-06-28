@@ -92,7 +92,11 @@ Note: manged identity `ingressapplicationgateway-*` is created by command `az ak
 
 #### Workflow
 
+- UAMI workflow of createing new AKS cluster
+
 ![UAMI workflow with new AKS cluster](images/new-aks.png "UAMI workflow with new AKS cluster")
+
+-UAMI workflow of bringing existing AKS cluster
 
 ![UAMI workflow with new AKS cluster](images/bring-aks.png "UAMI workflow with existing AKS cluster")
 
