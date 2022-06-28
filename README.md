@@ -1,21 +1,88 @@
-This sample is to provision Azure User Assigned Managed Identify (UAMI) and Deployment Script using Bicep template. By assigning Contributor Role to the UAMI, the deplyment script is able to access/update Azure resource (here is a storage account).
+This sample is to provision Azure User Assigned Managed Identify (UAMI), Azure Kubernetes Service, Azure Application Gateway, Azure Key Vault and run Oracle WebLogic Server using Bicep template.  By assigning Contributor Role to the UAMI, the deplyment script is able to access/update Azure resources.
 
 ## Prerequisites
+-------------------------
 
 To deploy the sample, you must meet one of the following subscription permission: 
 - [Contributor](https://docs.microsoft.com/en-us/azure/role-based-access-control/built-in-roles#contributor) + [User Access Administrator](https://docs.microsoft.com/en-us/azure/role-based-access-control/built-in-roles#user-access-administrator) (Both are subsrciption roles, not AAD roles.)
 - [Owner](https://docs.microsoft.com/en-us/azure/role-based-access-control/built-in-roles#owner)
 
 ## Run with Azure CLI
+-------------------------
+
+### Run the sample with a new AKS cluster
 
 Create a resourc group:
 
 ```bash
-az group create -n azure-uami-sample-rg -l eastus
+az group create -n javaee-on-azure-uami-prototype-rg -l eastus
 ```
 
 Invoke the script:
 
 ```bash
-az deployment group create -f main.bicep -g azure-uami-sample-rg
+az deployment group create -f mainTemplate.bicep -g javaee-on-azure-uami-prototype-rg
 ```
+
+### Run the sample with an existing AKS cluster
+
+Create a resourc group:
+
+```bash
+az group create -n javaee-on-azure-uami-prototype-rg -l eastus
+```
+
+Create an AKS cluster
+
+```bash
+az aks create -g javaee-on-azure-uami-prototype-rg -n javaeeUamiTestWlsOnAks --enable-managed-identity
+```
+
+Invoke the script and specify the AKS cluster:
+
+```bash
+az deployment group create -f mainTemplate.bicep \
+    -g javaee-on-azure-uami-prototype-rg \
+    --parameters aksClusterName=javaeeUamiTestWlsOnAks aksClusterRGName=javaee-on-azure-uami-prototype-rg createAKSCluster=false
+```
+
+## Design details
+-------------------------
+
+### Senarios
+
+| Resources | Use Cases |
+|---|---|
+| AKS | 1. Create a new AKS with system managed identity enable. <br> 2. Support existing AKS cluster of different auth mode: <br> &nbsp; - User assigned managed identity. <br> &nbsp; - System assigned managed identity. <br> &nbsp; - Service principal |
+| Key Vault| Auto generate a self-signed certificate for Application SSL/TLS termination, and store it in the key vault. |
+| Application Gateway | 1. Expose workload with HTTP. <br> 2. Expose workload with HTTPS. |
+| Storage | Enable AKS PV on a SMB file share. |
+
+### Managed Identity and Roles
+
+Here list key managed identity used in the prototype. Terms and phrases used in the table:
+
+- Current resource group: the resource group that runs this sample, e.g. `javaee-on-azure-uami-prototype-rg`
+- AKS Node resource group: the managed resource group ok AKS, e.g. `MC_javaee-on-azure-uami-prototype-rg_javaeeUamiTestWlsOnAks_eastus`
+
+1. Managed Identity and roles used in the sample when creating a new AKS cluster.
+
+| Managed Identity Name | Type | Role Assignments | Scope | Usage |
+|---|---|---|---|------------|
+| `wls-aks-application-gateway-user-defined-managed-itentity` | User Assigned | Contributor | Subscription | The identity is used for Deployment Script: <br> &nbsp; - To access and update AKS cluster for WebLogic deployment and ingress creation. <br> &nbsp; - To access and update key vault. |
+| `wls-aks-application-gateway-user-defined-managed-itentity` | User Assigned | Contributor | Current resource group | 1. To connect Application Gateway and AGIC. <br> 2. To access key vault for SSL certificate of Application Gateway.  |
+
+2. Managed Identity and roles used in the sample when bringing an existing AKS cluster
+
+| Managed Identity Name | Type | Resource group |Role Assignments | Scope | Usage |
+|---|---|---|---|------------|---|
+| `wls-aks-application-gateway-user-defined-managed-itentity` | User Assigned | Current resource group | Contributor | Subscription | The identity is used for Deployment Script: <br> &nbsp; - To access and update existing AKS cluster for WebLogic deployment, network peering and ingress creation. <br> &nbsp; - To access and update key vault. |
+| `wls-aks-application-gateway-user-defined-managed-itentity` | User Assigned | Current resource group| Contributor | Current resource group | 1. To access key vault for SSL certificate of Application Gateway.  |
+| `ingressapplicationgateway-*` | User Assigned | AKS Node resource group | Contributor | Current resource group | 1. Connect ACIG and Application Gateway. |
+
+Note: manged identity `ingressapplicationgateway-*` is created by command `az aks enable-addons -n ${NAME_AKS_CLUSTER} -g ${NAME_AKS_CLUSTER_RG} --addons ingress-appgw --appgw-id $appgwId`, the command does not support specifying a managed identity.
+
+
+
+
+
