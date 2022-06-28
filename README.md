@@ -1,14 +1,12 @@
 This sample is to provision Azure User Assigned Managed Identify (UAMI), Azure Kubernetes Service, Azure Application Gateway, Azure Key Vault and run Oracle WebLogic Server using Bicep template.  By assigning Contributor Role to the UAMI, the deplyment script is able to access/update Azure resources.
 
 ## Prerequisites
--------------------------
 
 To deploy the sample, you must meet one of the following subscription permission: 
 - [Contributor](https://docs.microsoft.com/en-us/azure/role-based-access-control/built-in-roles#contributor) + [User Access Administrator](https://docs.microsoft.com/en-us/azure/role-based-access-control/built-in-roles#user-access-administrator) (Both are subsrciption roles, not AAD roles.)
 - [Owner](https://docs.microsoft.com/en-us/azure/role-based-access-control/built-in-roles#owner)
 
 ## Run with Azure CLI
--------------------------
 
 ### Run the sample with a new AKS cluster
 
@@ -47,7 +45,6 @@ az deployment group create -f mainTemplate.bicep \
 ```
 
 ## Design details
--------------------------
 
 ### Senarios
 
