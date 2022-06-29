@@ -11,7 +11,7 @@ ymlWlsWdtSecret="wls-wdt-k8s-secret.yaml"
 ymlWlsAdminAccountSecret="wls-admin-k8s-secret.yaml"
 ymlWlsDomain="wls-domain.yaml"
 curlMaxTime=120
-wlsDomainNS="${wlsDomainNS}"
+wlsDomainNS="sample-domain1-ns"
 
 function generate_sample_configurations() {
     cat <<EOF >${scriptDir}/${ymlIngressWlsAdmin}
