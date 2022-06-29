@@ -87,14 +87,14 @@ Here list key managed identity used in the prototype. Terms and phrases used in 
 
 | Managed Identity Name | Type | Role Assignments | Scope | Usage |
 |---|---|---|---|------------|
-| `wls-aks-application-gateway-user-defined-managed-itentity` | User Assigned | Contributor | Subscription | The identity is used for Deployment Script: <br> &nbsp; - To access and update AKS cluster for WebLogic deployment and ingress creation. <br> &nbsp; - To access and update key vault. |
+| `wls-aks-deployment-script-user-defined-managed-itentity` | User Assigned | Contributor | Subscription | The identity is used for Deployment Script: <br> &nbsp; - To access and update AKS cluster for WebLogic deployment and ingress creation. <br> &nbsp; - To access and update key vault. |
 | `wls-aks-application-gateway-user-defined-managed-itentity` | User Assigned | Contributor | Current resource group | 1. To connect Application Gateway and AGIC. <br> 2. To access key vault for SSL certificate of Application Gateway.  |
 
 2. Managed Identity and roles used in the sample when bringing an existing AKS cluster
 
 | Managed Identity Name | Type | Resource group |Role Assignments | Scope | Usage |
 |---|---|---|---|------------|---|
-| `wls-aks-application-gateway-user-defined-managed-itentity` | User Assigned | Current resource group | Contributor | Subscription | The identity is used for Deployment Script: <br> &nbsp; - To access and update existing AKS cluster for WebLogic deployment, network peering and ingress creation. <br> &nbsp; - To access and update key vault. |
+| `wls-aks-deployment-script-user-defined-managed-itentity` | User Assigned | Current resource group | Contributor | Subscription | The identity is used for Deployment Script: <br> &nbsp; - To access and update existing AKS cluster for WebLogic deployment, network peering and ingress creation. <br> &nbsp; - To access and update key vault. |
 | `wls-aks-application-gateway-user-defined-managed-itentity` | User Assigned | Current resource group| Contributor | Current resource group | 1. To access key vault for SSL certificate of Application Gateway.  |
 | `ingressapplicationgateway-*` | User Assigned | AKS Node resource group | Contributor | Current resource group | 1. Connect ACIG and Application Gateway. |
 
