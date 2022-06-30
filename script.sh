@@ -393,22 +393,6 @@ function enable_agic() {
   fi
 }
 
-function utility_check_pv_state {
-
-    echo_stdout "Checking if the persistent volume ${1:?} is ${2:?}"
-    local pv_state=$(kubectl get pv $1 -o jsonpath='{.status.phase}')
-    attempts=0
-    while [ ! "$pv_state" = "$2" ] && [ ! $attempts -eq $3 ]; do
-        attempts=$((attempts + 1))
-        sleep $4
-        pv_state=$(kubectl get pv $1 -o jsonpath='{.status.phase}')
-    done
-    if [ "$pv_state" != "$2" ]; then
-        echo_stderr "The persistent volume state should be $2 but is $pv_state"
-        exit 1
-    fi
-}
-
 function enable_storage() {
   echo "create pv/pvc."
   local storageAccountKey=$(az storage account keys list \
@@ -416,7 +400,7 @@ function enable_storage() {
     --account-name $NAME_STORAGE_ACCOUNT --query "[0].value" -o tsv)
   local azureSecretName="azure-secret"
   kubectl -n ${wlsDomainNS} create secret generic ${azureSecretName} \
-      --from-literal=azurestorageaccountname=${storageAccountName} \
+      --from-literal=azurestorageaccountname=${NAME_STORAGE_ACCOUNT} \
       --from-literal=azurestorageaccountkey=${storageAccountKey}
 
   cat <<EOF >pv.yaml
@@ -466,7 +450,6 @@ spec:
 EOF
 
   kubectl apply -f pv.yaml
-  utility_check_pv_state "azure-smb-pv" "Bound" 20 10
   echo "create pvc"
   kubectl apply -f pvc.yaml
 }
