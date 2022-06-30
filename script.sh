@@ -399,6 +399,7 @@ function enable_storage() {
     --resource-group $NAME_RESOURCE_GROUP \
     --account-name $NAME_STORAGE_ACCOUNT --query "[0].value" -o tsv)
   local azureSecretName="azure-secret"
+  echo "create secret."
   kubectl -n ${wlsDomainNS} create secret generic ${azureSecretName} \
       --from-literal=azurestorageaccountname=${NAME_STORAGE_ACCOUNT} \
       --from-literal=azurestorageaccountkey=${storageAccountKey}
@@ -479,8 +480,6 @@ else
   az aks get-credentials --resource-group ${NAME_RESOURCE_GROUP} --name ${NAME_AKS_CLUSTER}
 fi
 
-enable_storage
-
 generate_sample_configurations
 
 echo "install weblogic operator"
@@ -503,6 +502,9 @@ echo "install weblogic"
 kubectl apply -f ${ymlWlsNs}
 kubectl apply -f ${ymlWlsWdtSecret}
 kubectl apply -f ${ymlWlsAdminAccountSecret}
+
+enable_storage
+
 echo "deploy weblogic domain"
 kubectl apply -f ${ymlWlsDomain}
 
